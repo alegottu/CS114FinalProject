@@ -349,7 +349,7 @@ int main()
     // Enable vertex attributes for shaders
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)( 3 * sizeof(float) ));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)( 3 * sizeof(float) )); // Offset for start of texture coordinates
     glEnableVertexAttribArray(1);
 
     float lastFrame = 0.0f;
