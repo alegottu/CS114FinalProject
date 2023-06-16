@@ -430,7 +430,7 @@ int main()
         // Update matrices
         glm::mat4 view = glm::lookAt(camera.position, camera.position + camera.forward, camera.up);
         glm::mat4 model = glm::mat4(1.0f); // Identity matrix
-        model = glm::rotate(model, glm::radians(rotation), glm::vec3(1.0f)); // Desired transformation for model is to rotate 55 degrees around the axis
+        model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 1.0f)); // Desired transformation for model is to rotate 55 degrees around the axis
         rotation += rotationAmount * deltaTime;
         rotation = std::fmod(rotation, 360); // To prevent overflow
 
