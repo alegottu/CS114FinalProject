@@ -5,6 +5,8 @@
 #include <glm/vec2.hpp>
 #include <vector>
 
+const unsigned int levelsOfDetail = 2;
+
 struct Vertex
 {
 	glm::vec3 position;
@@ -26,15 +28,16 @@ struct Texture
 class Mesh
 {
 	public:
-		Mesh(const std::vector<Vertex> vertices, const std::vector<Texture> textures, const std::vector<unsigned int> indices);
+		Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
 		
 		void draw(const unsigned int shader) const;
 		void cleanUp();
 	
 	private:
+
 		std::vector<Vertex> vertices;
-		std::vector<Texture> textures;
 		std::vector<unsigned int> indices;
+		std::vector<Texture> textures;
 
 		unsigned int vertexArray, vertexBuffer, elementBuffer = 0; // IDs for each
 };
@@ -45,7 +48,7 @@ class Model
 		Model(std::vector<Mesh> meshes);
 
 		void draw(const unsigned int shader) const;
-		void cleanUp(); // Seperate because cannot be called more than once as a result of local variables going out of scope; handles OpenGL clean up;
+		void cleanUp(); // Not in destructor because cannot be called more than once as a result of local variables going out of scope; handles OpenGL clean up
 
 	private:
 		std::vector<Mesh> meshes;

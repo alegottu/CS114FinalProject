@@ -15,6 +15,7 @@
 #include <sstream>
 #include <cmath>
 #include <vector>
+#include <limits>
 
 #include "Camera.hpp"
 #include "Model.h"
@@ -221,7 +222,6 @@ static unsigned int loadTexture(const char* rootPath, const char* fileName)
     return texture;
 }
 
-// Possibly change to a vector of const ints for num uniform in shader, not expandable
 static Mesh processMesh(const char* rootPath, const aiMesh* const mesh, const aiScene* const scene, std::vector<Texture>& loadedTextures)
 {
     unsigned int numVertices = mesh->mNumVertices;
@@ -320,7 +320,7 @@ static Mesh processMesh(const char* rootPath, const aiMesh* const mesh, const ai
         }
     }
 
-    return Mesh(vertices, textures, indices);
+    return Mesh(vertices, indices, textures);
 }
 
 static std::vector<Mesh> processNode(const char* rootPath, const aiNode* const node, const aiScene* const scene, std::vector<Texture>& loadedTextures)
@@ -369,7 +369,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "COMPSCI 114 Final Project", NULL, NULL);
-    if (window == NULL) 
+    if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -378,18 +378,18 @@ int main()
 
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetCursorPos(window, SCR_WIDTH/2, SCR_HEIGHT/2);
+    glfwSetCursorPos(window, SCR_WIDTH / 2, SCR_HEIGHT / 2);
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) 
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
     else
     {
-        std::cout << "Successfully loaded OpenGL version " << glGetString(GL_VERSION)  << " function pointers" << std::endl;
+        std::cout << "Successfully loaded OpenGL version " << glGetString(GL_VERSION) << " function pointers" << std::endl;
     }
 
     stbi_set_flip_vertically_on_load(true);
@@ -398,7 +398,7 @@ int main()
     // Set up camera and matrices
     float rotationAmount = 0.0f; float rotation = 0.0f; // For rotating model over time
     float fov = 45.0f; float near = 0.1f; float far = 100.0f;
-    glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH/(float)SCR_HEIGHT, near, far);
+    glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, near, far);
 
     // Load shaders
     const std::string vertexSource = parseShader("res/shaders/shader.vs");
@@ -407,7 +407,20 @@ int main()
     glUseProgram(shader);
 
     // Load models
-    Model backpack = loadModel("res/backpack/", "backpack.obj");
+    const unsigned int modelCount = 1;
+    Model models[modelCount][levelsOfDetail] = { { loadModel("res/backpack/backpack0/", "backpack.obj"), loadModel("res/backpack/backpack1/", "backpack.obj") } };
+    glm::vec3 modelPositions[modelCount] = { glm::vec3(0.0f) };
+    unsigned int modelLODs[modelCount]{ 0 };
+
+    // Define distance thresholds for levels of detail
+    const float nextThresholdMultiplier = 2.0f;
+    float currentThreshold = 10.0f;
+    float distanceThresholds[levelsOfDetail];
+
+    for (unsigned int i = 0; i < levelsOfDetail; ++i)
+    {
+        distanceThresholds[i] = currentThreshold + (currentThreshold * nextThresholdMultiplier * i);
+    }
 
     // Find uniform locations to send matrices to shaders later
     int modelLocation = glGetUniformLocation(shader, "model");
@@ -422,7 +435,31 @@ int main()
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        std::cout << "Current frame duration: " << std::to_string(deltaTime) << '\r' << std::endl;
+        // std::cout << "FPS: " << std::to_string(1.0f / currentFrame) << '\r' << std::flush;
+
         handleInput(window);
+
+        // After camera movement, find if we should increase or decrease level of detail by comparing the distance for each model
+        for (unsigned int i = 0; i < modelCount; ++i)
+        {
+            float dist = glm::distance(camera.position, modelPositions[i]);
+
+            for (unsigned int level = 0; level < levelsOfDetail; ++level)
+            {
+                if (level < (levelsOfDetail - 1) && dist > distanceThresholds[level])
+                {
+                    modelLODs[i] = level + 1; // Goes down a level of detail
+                    break;
+                }
+                else if (level > 0 && dist < distanceThresholds[level])
+                {
+                    modelLODs[i] = level - 1;
+                    break;
+                }
+            }
+        }
 
         glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -439,14 +476,24 @@ int main()
         glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
 
 		// Load and bind vertex attributes and indices from meshes before draw
-        backpack.draw(shader);
+        for (unsigned int i = 0; i < modelCount; ++i)
+        {
+            models[i][modelLODs[i]].draw(shader);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    for (unsigned int i = 0; i < modelCount; ++i)
+    {
+        for (unsigned int j = 0; j < levelsOfDetail; ++j)
+        {
+            models[i][j].cleanUp();
+		}
+    }
+
 	glDeleteProgram(shader);
-    backpack.cleanUp();
     glfwTerminate();
 
     return 0;

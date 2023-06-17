@@ -14,19 +14,19 @@ Texture::Texture(unsigned int id, bool isSpecular, const char* file, const char*
 {
 }
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<Texture> textures, std::vector<unsigned int> indices)
-	: vertices(vertices), textures(textures), indices(indices)
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures)
+    : vertices(vertices), indices(indices), textures(textures)
 {
 	glGenVertexArrays(1, &vertexArray);
     glGenBuffers(1, &vertexBuffer);
     glGenBuffers(1, &elementBuffer);
-  
+
     glBindVertexArray(vertexArray);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);  
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
-
+    
     // vertex positions
     size_t size = sizeof(Vertex);
     glEnableVertexAttribArray(0);	
@@ -66,7 +66,7 @@ void Mesh::cleanUp()
 }
 
 Model::Model(std::vector<Mesh> meshes)
-	: meshes(meshes)
+    : meshes(meshes)
 {
 }
 
