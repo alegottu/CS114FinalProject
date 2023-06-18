@@ -436,7 +436,7 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        std::cout << "Current frame duration: " << std::to_string(deltaTime) << '\r' << std::endl;
+        std::cout << "Current frame duration: " << std::to_string(deltaTime) << '\r' << std::flush;
         // std::cout << "FPS: " << std::to_string(1.0f / currentFrame) << '\r' << std::flush;
 
         handleInput(window);
