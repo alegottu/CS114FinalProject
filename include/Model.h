@@ -5,6 +5,8 @@
 #include <glm/vec2.hpp>
 #include <vector>
 
+const unsigned int levelsOfDetail = 2;
+
 struct Vertex
 {
 	glm::vec3 position;
@@ -26,15 +28,15 @@ struct Texture
 class Mesh
 {
 	public:
-		Mesh(const std::vector<Vertex> vertices, const std::vector<Texture> textures, const std::vector<unsigned int> indices);
+		Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Texture>& textures);
 		
 		void draw(const unsigned int shader) const;
 		void cleanUp();
 	
 	private:
 		std::vector<Vertex> vertices;
-		std::vector<Texture> textures;
 		std::vector<unsigned int> indices;
+		std::vector<Texture> textures;
 
 		unsigned int vertexArray, vertexBuffer, elementBuffer = 0; // IDs for each
 };

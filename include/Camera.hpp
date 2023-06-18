@@ -8,7 +8,7 @@ struct Camera
 {
     public:
     Camera(glm::vec3 position)
-    : position(position)
+		: position(position)
     {
         forward = glm::vec3(0.0f, 0.0f, -1.0f);
         right = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -22,7 +22,7 @@ struct Camera
     glm::vec3 right;
     glm::vec3 up;
 
-    const float speed = 1.0f;
+    const float speed = 5.0f;
     float yaw; // Angle to determine forward direction
     float pitch; // Angle to determine up direction
 };

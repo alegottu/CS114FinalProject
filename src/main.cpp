@@ -15,9 +15,12 @@
 #include <sstream>
 #include <cmath>
 #include <vector>
+#include <limits>
 
 #include "Camera.hpp"
 #include "Model.h"
+#include "AABB.h"
+#include "Octree.h"
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -221,7 +224,6 @@ static unsigned int loadTexture(const char* rootPath, const char* fileName)
     return texture;
 }
 
-// Possibly change to a vector of const ints for num uniform in shader, not expandable
 static Mesh processMesh(const char* rootPath, const aiMesh* const mesh, const aiScene* const scene, std::vector<Texture>& loadedTextures)
 {
     unsigned int numVertices = mesh->mNumVertices;
@@ -320,7 +322,7 @@ static Mesh processMesh(const char* rootPath, const aiMesh* const mesh, const ai
         }
     }
 
-    return Mesh(vertices, textures, indices);
+    return Mesh(vertices, indices, textures);
 }
 
 static std::vector<Mesh> processNode(const char* rootPath, const aiNode* const node, const aiScene* const scene, std::vector<Texture>& loadedTextures)
@@ -369,7 +371,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "COMPSCI 114 Final Project", NULL, NULL);
-    if (window == NULL) 
+    if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -378,27 +380,27 @@ int main()
 
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetCursorPos(window, SCR_WIDTH/2, SCR_HEIGHT/2);
+    glfwSetCursorPos(window, SCR_WIDTH / 2, SCR_HEIGHT / 2);
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) 
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
     else
     {
-        std::cout << "Successfully loaded OpenGL version " << glGetString(GL_VERSION)  << " function pointers" << std::endl;
+        std::cout << "Successfully loaded OpenGL version " << glGetString(GL_VERSION) << " function pointers" << std::endl;
     }
 
     stbi_set_flip_vertically_on_load(true);
     glEnable(GL_DEPTH_TEST);
 
     // Set up camera and matrices
-    float rotationAmount = 0.0f; float rotation = 0.0f; // For rotating model over time
+    float rotationAmount = 15.0f; float rotation = 0.0f; // For rotating model over time
     float fov = 45.0f; float near = 0.1f; float far = 100.0f;
-    glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH/(float)SCR_HEIGHT, near, far);
+    glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, near, far);
 
     // Load shaders
     const std::string vertexSource = parseShader("res/shaders/shader.vs");
@@ -407,7 +409,15 @@ int main()
     glUseProgram(shader);
 
     // Load models
-    Model backpack = loadModel("res/backpack/", "backpack.obj");
+    const unsigned int modelCount = 1;
+    Model models[modelCount][levelsOfDetail] = { { loadModel("res/backpack/backpack0/", "backpack.obj"), loadModel("res/backpack/backpack1/", "backpack.obj") } };
+    const glm::vec3 modelPositions[modelCount] = { glm::vec3(1.0f, 1.0f, 0.0f) };
+    // const AABB modelBoxes[modelCount] = { AABB(modelPositions[0], glm::vec3(0.25f), true) };
+    unsigned int modelLODs[modelCount]{ 0 };
+
+    // Construct scene octree
+    const AABB sceneBox = AABB(glm::vec3(0.0f), glm::vec3(0.5f));
+    Node* root = build(sceneBox, std::vector<unsigned int>{}, modelPositions, modelCount, 0);
 
     // Find uniform locations to send matrices to shaders later
     int modelLocation = glGetUniformLocation(shader, "model");
@@ -422,15 +432,23 @@ int main()
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        std::cout << "Current frame duration: " << std::to_string(deltaTime) << '\r' << std::flush;
+        // std::cout << "FPS: " << std::to_string(1.0f / currentFrame) << '\r' << std::flush;
+
         handleInput(window);
 
+        // After camera, use navigate the octree to find the appropiate levels of detail for each model
+        findLevelsOfDetail(root, modelLODs, camera.position);
+        
         glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Update matrices
         glm::mat4 view = glm::lookAt(camera.position, camera.position + camera.forward, camera.up);
         glm::mat4 model = glm::mat4(1.0f); // Identity matrix
-        model = glm::rotate(model, glm::radians(rotation), glm::vec3(1.0f)); // Desired transformation for model is to rotate 55 degrees around the axis
+        model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f)); // Desired transformation for model is to rotate 55 degrees around the axis
+        model = glm::translate(model, modelPositions[0]);
         rotation += rotationAmount * deltaTime;
         rotation = std::fmod(rotation, 360); // To prevent overflow
 
@@ -439,14 +457,25 @@ int main()
         glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
 
 		// Load and bind vertex attributes and indices from meshes before draw
-        backpack.draw(shader);
+        for (unsigned int i = 0; i < modelCount; ++i)
+        {
+            models[i][modelLODs[i]].draw(shader);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    for (unsigned int i = 0; i < modelCount; ++i)
+    {
+        for (unsigned int j = 0; j < levelsOfDetail; ++j)
+        {
+            models[i][j].cleanUp();
+		}
+    }
+
+    destructNode(root, 0);
 	glDeleteProgram(shader);
-    backpack.cleanUp();
     glfwTerminate();
 
     return 0;

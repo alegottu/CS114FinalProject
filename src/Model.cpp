@@ -1,7 +1,5 @@
 #include <glad/glad.h>
 
-#include <iostream>
-
 #include "Model.h"
 
 Texture::Texture()
@@ -14,8 +12,8 @@ Texture::Texture(unsigned int id, bool isSpecular, const char* file, const char*
 {
 }
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<Texture> textures, std::vector<unsigned int> indices)
-	: vertices(vertices), textures(textures), indices(indices)
+Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices,const std::vector<Texture>& textures)
+	: vertices(vertices), indices(indices), textures(textures) 
 {
 	glGenVertexArrays(1, &vertexArray);
     glGenBuffers(1, &vertexBuffer);
