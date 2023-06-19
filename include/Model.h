@@ -30,13 +30,15 @@ class Mesh
 	public:
 		Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Texture>& textures);
 		
-		void draw(const unsigned int shader) const;
+		void setup(const unsigned int shader);
+		void draw() const;
 		void cleanUp();
 	
 	private:
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		std::vector<Texture> textures;
+		std::vector<int> samplers; // Shader locations for textures
 
 		unsigned int vertexArray, vertexBuffer, elementBuffer = 0; // IDs for each
 };
@@ -44,9 +46,9 @@ class Mesh
 class Model
 {
 	public:
-		Model(std::vector<Mesh> meshes);
+		Model(std::vector<Mesh> meshes, const unsigned int shader);
 
-		void draw(const unsigned int shader) const;
+		void draw() const;
 		void cleanUp(); // Seperate because cannot be called more than once as a result of local variables going out of scope; handles OpenGL clean up;
 
 	private:

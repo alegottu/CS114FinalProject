@@ -48,7 +48,7 @@ static Node* build(const AABB& bbox, const std::vector<unsigned int>& models, co
 	glm::vec3 center = bbox.center;
     glm::vec3 xMove = glm::vec3(1.0f, 0.0f, 0.0f) * bbox.extents.x;
     glm::vec3 yMove = glm::vec3(0.0f, 1.0f, 0.0f) * bbox.extents.y;
-    glm::vec3 zMove = glm::vec3(0.0f, 1.0f, 0.0f) * bbox.extents.z;
+    glm::vec3 zMove = glm::vec3(0.0f, 0.0f, 1.0f) * bbox.extents.z;
 
 	// Octants defined in clockwise order from the bottom-left
 	AABB octants[8] = {
@@ -127,9 +127,9 @@ static void findLevelsOfDetail(Node* const root, unsigned int* modelLODs, const 
 		glm::vec3 center = node->boundingBox.center;
 		
 		// Calculate a number from 0 to 7 that will choose the correct octant where the camera resides
-		short xDifference = std::signbit(cameraPosition.x - center.x);
-		short yDifference = std::signbit(cameraPosition.y - center.y) * 4;
-		short zDifference = std::signbit(cameraPosition.z - center.z);
+		short xDifference = !std::signbit(cameraPosition.x - center.x);
+		short yDifference = !std::signbit(cameraPosition.y - center.y) * 4;
+		short zDifference = !std::signbit(cameraPosition.z - center.z);
 		zDifference = zDifference + 2 * (1 - xDifference);
 		short nextChild = xDifference + yDifference + zDifference;
 

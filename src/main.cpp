@@ -56,7 +56,7 @@ static void errorCallbackGLFW(int code, const char* description)
     std::cout << "Error from GLFW from " << __FILE__ << " at line " << __LINE__ << ": " << description << std::endl;
 }
 
-Camera camera {glm::vec3(0.0f, 0.0f, 3.0f)};
+Camera camera {glm::vec3(0.0f, 1.0f, 5.0f)};
 float deltaTime = 0.0f;
 static void handleInput(GLFWwindow* window)
 {
@@ -346,7 +346,7 @@ static std::vector<Mesh> processNode(const char* rootPath, const aiNode* const n
     return result;
 }
 
-static Model loadModel(const char* rootPath, const char* fileName)
+static Model loadModel(const char* rootPath, const char* fileName, const unsigned int shader)
 {
 	Assimp::Importer importer;
     std::string path = std::string(rootPath) + std::string(fileName);
@@ -355,11 +355,12 @@ static Model loadModel(const char* rootPath, const char* fileName)
     if (scene == nullptr || scene->mFlags != NULL && AI_SCENE_FLAGS_INCOMPLETE || scene->mRootNode == nullptr)
     {
         std::cout << "Error loading model: " << importer.GetErrorString() << std::endl;
-        return Model(std::vector<Mesh>{});
+        return Model(std::vector<Mesh>{}, 0);
     }
 
     std::vector<Texture> loadedTextures; // Possibly change to set
-    return Model(processNode(rootPath, scene->mRootNode, scene, loadedTextures));
+    Model result(processNode(rootPath, scene->mRootNode, scene, loadedTextures), shader);
+    return result;
 }
 
 int main()
@@ -398,7 +399,7 @@ int main()
     glEnable(GL_DEPTH_TEST);
 
     // Set up camera and matrices
-    float rotationAmount = 15.0f; float rotation = 0.0f; // For rotating model over time
+    float rotationAmount = 0.0f; float rotation = 0.0f; // For rotating model over time
     float fov = 45.0f; float near = 0.1f; float far = 100.0f;
     glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, near, far);
 
@@ -410,13 +411,13 @@ int main()
 
     // Load models
     const unsigned int modelCount = 1;
-    Model models[modelCount][levelsOfDetail] = { { loadModel("res/backpack/backpack0/", "backpack.obj"), loadModel("res/backpack/backpack1/", "backpack.obj") } };
+    Model models[modelCount][levelsOfDetail] = { { loadModel("res/backpack/backpack0/", "backpack.obj", shader), loadModel("res/backpack/backpack1/", "backpack.obj", shader) } };
     const glm::vec3 modelPositions[modelCount] = { glm::vec3(1.0f, 1.0f, 0.0f) };
     // const AABB modelBoxes[modelCount] = { AABB(modelPositions[0], glm::vec3(0.25f), true) };
     unsigned int modelLODs[modelCount]{ 0 };
 
     // Construct scene octree
-    const AABB sceneBox = AABB(glm::vec3(0.0f), glm::vec3(0.5f));
+    const AABB sceneBox = AABB(glm::vec3(0.0f), glm::vec3(6.0f), true);
     Node* root = build(sceneBox, std::vector<unsigned int>{}, modelPositions, modelCount, 0);
 
     // Find uniform locations to send matrices to shaders later
@@ -459,7 +460,7 @@ int main()
 		// Load and bind vertex attributes and indices from meshes before draw
         for (unsigned int i = 0; i < modelCount; ++i)
         {
-            models[i][modelLODs[i]].draw(shader);
+            models[i][modelLODs[i]].draw();
         }
 
         glfwSwapBuffers(window);

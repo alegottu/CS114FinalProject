@@ -13,7 +13,7 @@ Texture::Texture(unsigned int id, bool isSpecular, const char* file, const char*
 }
 
 Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices,const std::vector<Texture>& textures)
-	: vertices(vertices), indices(indices), textures(textures) 
+    : vertices(vertices), indices(indices), textures(textures), samplers(std::vector<int>{})
 {
 	glGenVertexArrays(1, &vertexArray);
     glGenBuffers(1, &vertexBuffer);
@@ -39,14 +39,22 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>&
     glBindVertexArray(0);
 }
 
-
-void Mesh::draw(const unsigned int shader) const
+void Mesh::setup(const unsigned int shader)
 {
+    // Investigate samplers count not matching textures
 	for (unsigned int i = 0; i < textures.size(); ++i)
+	{
+		samplers.push_back(glGetUniformLocation(shader, textures[i].uniform));
+	}
+}
+
+void Mesh::draw() const
+{
+	for (unsigned int i = 0; i < samplers.size(); ++i)
 	{
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_2D, textures[i].id);
-		glUniform1i(glGetUniformLocation(shader, textures[i].uniform), i); // Set uniform sampler in shader
+		glUniform1i(samplers[i], i); // Set uniform sampler in shader
 	}
 
 	glBindVertexArray(vertexArray);
@@ -63,16 +71,20 @@ void Mesh::cleanUp()
     glDeleteBuffers(1, &elementBuffer);
 }
 
-Model::Model(std::vector<Mesh> meshes)
+Model::Model(std::vector<Mesh> meshes, const unsigned int shader)
 	: meshes(meshes)
 {
+    for (unsigned int i = 0; i < meshes.size(); ++i)
+    {
+        meshes[i].setup(shader);
+    }
 }
 
-void Model::draw(const unsigned int shader) const
+void Model::draw() const
 {
 	for (unsigned int i = 0; i < meshes.size(); ++i)
 	{
-		meshes[i].draw(shader);
+		meshes[i].draw();
 	}
 }
 
