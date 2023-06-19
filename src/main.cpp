@@ -399,7 +399,6 @@ int main()
     glEnable(GL_DEPTH_TEST);
 
     // Set up camera and matrices
-    float rotationAmount = 0.0f; float rotation = 0.0f; // For rotating model over time
     float fov = 45.0f; float near = 0.1f; float far = 100.0f;
     glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, near, far);
 
@@ -445,21 +444,17 @@ int main()
         glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Update matrices
+        // Update and send matrices to shader before draw
         glm::mat4 view = glm::lookAt(camera.position, camera.position + camera.forward, camera.up);
-        glm::mat4 model = glm::mat4(1.0f); // Identity matrix
-        model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f)); // Desired transformation for model is to rotate 55 degrees around the axis
-        model = glm::translate(model, modelPositions[0]);
-        rotation += rotationAmount * deltaTime;
-        rotation = std::fmod(rotation, 360); // To prevent overflow
-
-        // Send updated matrices to shader before draw
-        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
-
+		glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+        
 		// Load and bind vertex attributes and indices from meshes before draw
         for (unsigned int i = 0; i < modelCount; ++i)
         {
+			glm::mat4 model = glm::mat4(1.0f); // Identity matrix
+			model = glm::translate(model, modelPositions[i]);
+            glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+
             models[i][modelLODs[i]].draw();
         }
 
